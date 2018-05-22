@@ -21,7 +21,15 @@ sub new {
 }
 
 ########################################
+# MARC output as delegate
+sub as_usmarc {
+  my $self = shift;
+  $self->{_marc}->as_usmarc();
+}
+
+########################################
 # Bib level (LDR/07) accessor (get only)
+# Convenience method, this is often needed.
 sub bib_level {
   my $self = shift;
   return substr($self->{_marc}->leader(), 7, 1);
@@ -29,12 +37,21 @@ sub bib_level {
 
 ########################################
 # Encoding level (LDR/17) accessor (get only)
+# Convenience method, this is often needed.
 sub encoding_level {
   my $self = shift;
   my $elvl = substr($self->{_marc}->leader(), 17, 1);
   # Replace blank with '#' for clarity in printing
   my $blank = '#';
   return $elvl =~ s/ /$blank/r;
+}
+
+########################################
+# Field access via delegate
+sub field {
+  my $self = shift;
+  my $tag = shift;
+  return $self->{_marc}->field($tag);
 }
 
 ########################################
@@ -52,6 +69,13 @@ sub holdings_count {
 }
 
 ########################################
+# Leader access via delegate
+sub leader {
+  my $self = shift;
+  return $self->{_marc}->leader();
+}
+
+########################################
 # OCLC number accessor (get only)
 # These are records from Worldcat, so have OCLC number in 001.
 sub oclc_number {
@@ -61,6 +85,7 @@ sub oclc_number {
 
 ########################################
 # Record type (LDR/06) accessor (get only)
+# Convenience method, this is often needed.
 sub record_type {
   my $self = shift;
   return substr($self->{_marc}->leader(), 6, 1);

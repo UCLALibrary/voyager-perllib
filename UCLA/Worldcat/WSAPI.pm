@@ -52,7 +52,8 @@ sub search_sru {
   my @marc_records = $self->_xml_to_marc($xml);
 
   #say Dumper @marc_records;
-  $self->_TEST(\@marc_records);
+  #$self->_TEST(\@marc_records);
+  return @marc_records;
 }
 
 ########################################
