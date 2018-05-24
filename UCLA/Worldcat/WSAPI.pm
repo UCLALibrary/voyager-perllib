@@ -27,23 +27,38 @@ sub new {
 
 ########################################
 # Search Worldcat via SRU
-# For now, accept only a single search term (word or phrase).
+# For now, accept only a single set of search terms (single scalar word/phrase, or array of words/phrases).
 sub search_sru {
-  my ($self, $search_term, $index) = @_;
+  my ($self, $search_terms_ref, $index) = @_;
+
+  # If caller passed 1 scalar search term, instead of an array ref,
+  # convert it to array ref.
+  $search_terms_ref = [ $search_terms_ref ] if ref($search_terms_ref) ne 'ARRAY';
 
   # Set default index of title, if none provided by caller
   $index = 'srw.ti' if not $index;
-  # Wrap search term in double quotes, then url-escape it
-  $search_term = '"' . $search_term . '"';
-  $search_term = uri_escape($search_term);
+
+  # Construct boolean OR search from array of search terms
+  my $search_string;
+  foreach my $search_term (@$search_terms_ref) {
+    ###say "Term: ", $search_term;
+	next if $search_term eq '';
+	# Wrap search term in double-quotes
+    $search_term = '"' . $search_term . '"';
+	# Apply boolean OR, and index to use
+	$search_string .= ' or ' if $search_string;
+	$search_string .= "$index=$search_term";
+	###say "Search: ", $search_string;
+  }
+  $search_string = uri_escape($search_string);
 
   my $wc_api = 'http://www.worldcat.org/webservices/catalog/search/sru';
-  my $query = "query=$index=$search_term";
+  my $query = "query=$search_string";
   # Consider adding explicit maximumRecords parameter; default is 10
   my $params = 'servicelevel=full&frbrGrouping=off&wskey=' . $self->{_wskey};
 
   my $wc_url = "$wc_api?$query&$params";
-#say $wc_url;
+###say $wc_url;
 
   # Send the request and UTF-8 encode the response
   my $xml = $browser->get($wc_url)->decoded_content;
@@ -51,8 +66,8 @@ sub search_sru {
 
   my @marc_records = $self->_xml_to_marc($xml);
 
-  #say Dumper @marc_records;
-  #$self->_TEST(\@marc_records);
+  ###say Dumper @marc_records;
+  ###$self->_TEST(\@marc_records);
   return @marc_records;
 }
 
