@@ -21,8 +21,20 @@ $browser->agent('UCLA Library DIIT');
 sub new {
   my $class = shift;
   my $self = { _wskey => shift };
+  # Set defaults
+  $self->{'_max_records'} = 10;
+
   bless $self, $class;
   return $self;
+}
+
+########################################
+# Accessor for max records per search (get/set).
+sub max_records {
+  my ($self, $max_records) = @_;
+  # Set, if value provided
+  $self->{'_max_records'} = $max_records if $max_records;
+  return $self->{'_max_records'};
 }
 
 ########################################
@@ -51,11 +63,13 @@ sub search_sru {
 	###say "Search: ", $search_string;
   }
   $search_string = uri_escape($search_string);
+  return if ! $search_string;
 
   my $wc_api = 'http://www.worldcat.org/webservices/catalog/search/sru';
   my $query = "query=$search_string";
   # Consider adding explicit maximumRecords parameter; default is 10
-  my $params = 'servicelevel=full&frbrGrouping=off&wskey=' . $self->{_wskey};
+  my $params = 'servicelevel=full&frbrGrouping=off&maximumRecords=' . $self->{_max_records};
+  $params .= '&wskey=' . $self->{_wskey};
 
   my $wc_url = "$wc_api?$query&$params";
 ###say $wc_url;
@@ -136,19 +150,29 @@ sub _get_holdings {
   my $contents = $browser->get($wc_url)->decoded_content;
   utf8::encode($contents);
   # Data in JSON, not XML
-  my $json = decode_json($contents);
-  # Bail out if this OCLC number has no holdings
-  if ($json->{'diagnostics'}) {
-    return ($held_by_clu, $number_of_holdings);
-  }
+  my $json = '';
+  # This can cause an error if $contents is invalid JSON
+  eval {
+    $json = decode_json($contents);
+  };
+  if ($@) {
+    say "ERROR: Unable to get holdings JSON for OCLC $oclc_number";
+	say $wc_url;
+  } else {
 
-  $number_of_holdings = $json->{'totalLibCount'};
-  my @libraries = @{$json->{'library'}};
-  foreach my $library (@libraries) {
-    if ($library->{'oclcSymbol'} eq 'CLU') {
-      $held_by_clu = 1; # TRUE
-      last;
-    };
+    # Bail out if this OCLC number has no holdings
+    if ($json->{'diagnostics'}) {
+      return ($held_by_clu, $number_of_holdings);
+    }
+
+    $number_of_holdings = $json->{'totalLibCount'};
+    my @libraries = @{$json->{'library'}};
+    foreach my $library (@libraries) {
+      if ($library->{'oclcSymbol'} eq 'CLU') {
+        $held_by_clu = 1; # TRUE
+        last;
+      };
+    }
   }
 
   return ($held_by_clu, $number_of_holdings);
