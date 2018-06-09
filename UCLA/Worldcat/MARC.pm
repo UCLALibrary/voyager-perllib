@@ -21,6 +21,13 @@ sub new {
 }
 
 ########################################
+# MARC text output as delegate
+sub as_formatted {
+  my $self = shift;
+  $self->{_marc}->as_formatted();
+}
+
+########################################
 # MARC output as delegate
 sub as_usmarc {
   my $self = shift;
@@ -69,6 +76,13 @@ sub holdings_count {
 }
 
 ########################################
+# Add a field via delegate
+sub insert_fields_ordered {
+  my $self = shift;
+  my $field = shift;
+  $self->{_marc}->insert_fields_ordered($field);
+}
+########################################
 # Leader access via delegate
 sub leader {
   my $self = shift;
@@ -91,7 +105,6 @@ sub record_type {
   return substr($self->{_marc}->leader(), 6, 1);
 }
 
-########################################
 ########################################
 # Delegate to MARC record component
 sub title {
