@@ -64,10 +64,9 @@ sub search_sru {
   }
   $search_string = uri_escape($search_string);
   return if ! $search_string;
-
+###say $search_string;
   my $wc_api = 'http://www.worldcat.org/webservices/catalog/search/sru';
   my $query = "query=$search_string";
-  # Consider adding explicit maximumRecords parameter; default is 10
   my $params = 'servicelevel=full&frbrGrouping=off&maximumRecords=' . $self->{_max_records};
   $params .= '&wskey=' . $self->{_wskey};
 
@@ -91,6 +90,49 @@ sub search_sru {
 sub search_sru_sn {
   my ($self, $search_term) = @_;
   $self->search_sru($search_term, 'srw.sn');
+}
+
+########################################
+# Experimental method for searching SRU via
+# multiple indexes, contained in hash parameter.
+sub search_sru_combo {
+  my ($self, $search_terms_ref) = @_;
+  my %search_terms = %{ $search_terms_ref };
+  my $search_string = '';
+  foreach my $index (keys %search_terms) {
+	my $search_term = $search_terms{$index};
+	
+	# Wrap search term in double-quotes
+    $search_term = '"' . $search_term . '"';
+
+    # Add boolean AND if needed
+	$search_string .= ' AND ' if $search_string;
+
+	# Add index and search term
+	$search_string .= "$index=$search_term";
+  }
+say $search_string;
+  $search_string = uri_escape($search_string);
+  return if ! $search_string;
+
+  # TODO: Unify this duplicate code with search_sru routine
+  my $wc_api = 'http://www.worldcat.org/webservices/catalog/search/sru';
+  my $query = "query=$search_string";
+  my $params = 'servicelevel=full&frbrGrouping=off&maximumRecords=' . $self->{_max_records};
+  $params .= '&wskey=' . $self->{_wskey};
+
+  my $wc_url = "$wc_api?$query&$params";
+say $wc_url;
+
+  # Send the request and UTF-8 encode the response
+  my $xml = $browser->get($wc_url)->decoded_content;
+  utf8::encode($xml);
+
+  my @marc_records = $self->_xml_to_marc($xml);
+
+  ###say Dumper @marc_records;
+  $self->_TEST(\@marc_records);
+  ###return @marc_records;
 }
 
 ########################################
