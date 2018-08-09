@@ -21,6 +21,14 @@ sub new {
 }
 
 ########################################
+# Append a field via delegate
+sub append_fields {
+  my $self = shift;
+  my $field = shift;
+  $self->{_marc}->append_fields($field);
+}
+
+########################################
 # MARC text output as delegate
 sub as_formatted {
   my $self = shift;
@@ -82,6 +90,7 @@ sub insert_fields_ordered {
   my $field = shift;
   $self->{_marc}->insert_fields_ordered($field);
 }
+
 ########################################
 # Leader access via delegate
 sub leader {
