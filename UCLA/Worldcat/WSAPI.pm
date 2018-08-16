@@ -62,7 +62,7 @@ sub search_sru {
 	$search_string .= "$index=$search_term";
 	###say "Search: ", $search_string;
   }
-  $search_string = uri_escape($search_string);
+  $search_string = uri_escape_utf8($search_string);
   return if ! $search_string;
 ###say $search_string;
   my $wc_api = 'http://www.worldcat.org/webservices/catalog/search/sru';
