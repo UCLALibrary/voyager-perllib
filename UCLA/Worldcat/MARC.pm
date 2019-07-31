@@ -51,6 +51,14 @@ sub bib_level {
 }
 
 ########################################
+# Delete field(s) via delegate
+# @fields must be an array
+sub delete_fields {
+  my ($self, @fields) = @_;
+  $self->{_marc}->delete_fields(@fields);
+}
+
+########################################
 # Encoding level (LDR/17) accessor (get only)
 # Convenience method, this is often needed.
 sub encoding_level {

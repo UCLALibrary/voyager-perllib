@@ -159,20 +159,28 @@ sub _xml_to_marc {
 
 ########################################
 # Retrieve MARC record corresponding to the
-# given OCLC number.
-sub _get_marc {
+# given OCLC number.  Returns just the MARC record object.
+sub _get_marc_bare {
   my ($self, $oclc_number) = @_;
 
   # Use OCLC's single-record lookup by OCLC number
   my $wc_api = 'http://www.worldcat.org/webservices/catalog/content';
   my $params = 'servicelevel=full&wskey=' . $self->{_wskey};
   my $wc_url = "$wc_api/$oclc_number?$params";
-#say $wc_url;
   my $contents = $browser->get($wc_url)->decoded_content;
   utf8::encode($contents);
 
   # Convert to binary MARC, then create an enhanced record from that
   my $marc = MARC::Record->new_from_xml($contents, 'UTF-8');
+  return $marc;
+}
+
+########################################
+# Retrieve MARC record corresponding to the
+# given OCLC number.  Adds holdings info (held by CLU, # of holdings).
+sub _get_marc {
+  my ($self, $oclc_number) = @_;
+  my $marc = $self->_get_marc_bare($oclc_number);
   return UCLA::Worldcat::MARC->new($marc, $self->_get_holdings($oclc_number));
 }
 
