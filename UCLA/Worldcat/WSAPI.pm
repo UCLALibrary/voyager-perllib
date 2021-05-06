@@ -66,12 +66,12 @@ sub search_sru {
   return if ! $search_string;
 ###say $search_string;
   my $wc_api = 'http://www.worldcat.org/webservices/catalog/search/sru';
-  my $query = "query=$search_string";
+  my $query = "query=$search_string+NOT+srw.mt:url";
   my $params = 'servicelevel=full&frbrGrouping=off&maximumRecords=' . $self->{_max_records};
   $params .= '&wskey=' . $self->{_wskey};
 
   my $wc_url = "$wc_api?$query&$params";
-###say $wc_url;
+say $wc_url;
 
   # Send the request and UTF-8 encode the response
   my $xml = $browser->get($wc_url)->decoded_content;
@@ -192,11 +192,7 @@ sub _get_holdings {
   my $held_by_clu = 0; # FALSE
   my $number_of_holdings = 0;
 
-  my $wc_api = 'http://www.worldcat.org/webservices/catalog/content/libraries';
-  my $params = 'format=json&frbrGrouping=off&servicelevel=full&location=90095&wskey=' . $self->{_wskey};
-  my $wc_url = "$wc_api/$oclc_number?$params";
-#say $wc_url;
-  
+  my $wc_url = $self->_get_holdings_url($oclc_number);
   my $contents = $browser->get($wc_url)->decoded_content;
   utf8::encode($contents);
   # Data in JSON, not XML
@@ -207,25 +203,47 @@ sub _get_holdings {
   };
   if ($@) {
     say "ERROR: Unable to get holdings JSON for OCLC $oclc_number";
+	say "$@";
 	say $wc_url;
   } else {
 
-    # Bail out if this OCLC number has no holdings
-    if ($json->{'diagnostics'}) {
-      return ($held_by_clu, $number_of_holdings);
-    }
+	# If our OCLC number is not the official one, we need to
+	# pull that from the response and try again.
+	my $official_oclc = $json->{'OCLCnumber'};
+	if ($official_oclc ne $oclc_number) {
+	  return ($self->_get_holdings($official_oclc));
+	} else {
 
-    $number_of_holdings = $json->{'totalLibCount'};
-    my @libraries = @{$json->{'library'}};
-    foreach my $library (@libraries) {
-      if ($library->{'oclcSymbol'} eq 'CLU') {
-        $held_by_clu = 1; # TRUE
-        last;
-      };
+      # Bail out if this OCLC number has no holdings
+      if ($json->{'diagnostics'}) {
+        return ($held_by_clu, $number_of_holdings);
+      }
+
+      $number_of_holdings = $json->{'totalLibCount'};
+      my @libraries = @{$json->{'library'}};
+      foreach my $library (@libraries) {
+        if ($library->{'oclcSymbol'} eq 'CLU') {
+          $held_by_clu = 1; # TRUE
+          last;
+        };
+	  }
     }
   }
 
   return ($held_by_clu, $number_of_holdings);
+}
+
+########################################
+# Get URL with parameters to request holdings info
+# based on OCLC number.
+sub _get_holdings_url {
+  my ($self, $oclc_number) = @_;
+  my $holdings_url = '';
+  my $wc_api = 'http://www.worldcat.org/webservices/catalog/content/libraries';
+  my $params = 'format=json&frbrGrouping=off&servicelevel=full&location=90095&wskey=' . $self->{_wskey};
+  $holdings_url = "$wc_api/$oclc_number?$params";
+
+  return $holdings_url;
 }
 
 ########################################
